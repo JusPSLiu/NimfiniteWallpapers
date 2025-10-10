@@ -28,7 +28,7 @@ proc calculatedSleep(sleepLen_ms : int): void =
     echo offsetSleeplen_ms
     # if this one frame took way too long, try to catch up if possible
     if (offsetSleeplen_ms < 0):
-        negativeCatchupTime = max(offsetSleeplen_ms, negativeCatchupTime)
+        negativeCatchupTime = min(offsetSleeplen_ms, negativeCatchupTime)
     else:
         negativeCatchupTime = 0
     # reset lastTime for next time
@@ -43,8 +43,12 @@ for kind, path in walkDir(folder):
     case kind:
     of pcFile:
         echo "File: ", path
-        discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
-        calculatedSleep(min_time_ms)
+        if (negativeCatchupTime * -1 > min_time_ms):
+            # skip frames if took too long to set
+            negativeCatchupTime += min_time_ms
+        else:
+            discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
+            calculatedSleep(min_time_ms)
     of pcDir:
         echo "Dir: ", path
     of pcLinkToFile:
