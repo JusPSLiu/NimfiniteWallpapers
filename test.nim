@@ -7,6 +7,7 @@ import std/[times, os]
 var wallpaper1: LPCWSTR = "%OneDrive%/Pictures/Screenshots 1/Screenshot 2025-04-02 112249.png"
 var wallpaper2: LPCWSTR = "%OneDrive%/Pictures/Screenshots 1/Screenshot 2025-10-06 151307.png"
 var folder: string = getCurrentDir() & "\\src\\sample_slideshow\\bad_apple"
+#var folder: string = getCurrentDir() & "\\src\\sample_slideshow\\rickroll"
 
 echo getCurrentDir()
 echo folder
@@ -35,27 +36,24 @@ proc calculatedSleep(sleepLen_ms : int): void =
     lastTime = getTime()
 
 
+var lastfile : LPCWSTR
 
 for kind, path in walkDir(folder):
     # widen the string because Windows only reads wide strings
     let widestr: LPCWSTR = newWideCString(path)
 
-    case kind:
-    of pcFile:
+    if (kind == pcFile):
         echo "File: ", path
+        lastfile = widestr
         if (negativeCatchupTime * -1 > min_time_ms):
             # skip frames if took too long to set
             negativeCatchupTime += min_time_ms
         else:
             discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
             calculatedSleep(min_time_ms)
-    of pcDir:
-        echo "Dir: ", path
-    of pcLinkToFile:
-        echo "Link to file: ", path
-    of pcLinkToDir:
-        echo "Link to dir: ", path
 
+# make sure last file is always done, and not skipped
+discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, lastfile, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
 
 
 
