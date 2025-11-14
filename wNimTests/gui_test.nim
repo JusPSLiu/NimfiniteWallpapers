@@ -12,6 +12,7 @@ import wNim/[wApp, wFrame, wPanel, wStatusBar, wMenu,
   wButton, wRadioButton, wCheckBox, wComboBox, wCheckComboBox, wListBox,
   wNoteBook, wTextCtrl, wSpinCtrl, wHotkeyCtrl, wSlider, wGauge,
   wDatePickerCtrl, wTimePickerCtrl, wFileDialog, wImage]
+import std/os
 
 let app = App(wSystemDpiAware)
 let frame = Frame(title="wNim Demo", style=wDefaultFrameStyle or wModalFrame)
@@ -61,8 +62,8 @@ notebook.addPage("Page1")
 notebook.addPage("Page2")
 notebook.addPage("Page3")
 
-const logo = staticRead(r"C:/Users/jusps/Documents/ClassThings/5102/NimfiniteWallpapers/src/sample_slideshow/bad_apple/bap0022.png")
-let staticbitmap = StaticBitmap(notebook.page(0), bitmap=Bitmap("C:\\Users\\jusps\\Documents\\ClassThings\\5102\\NimfiniteWallpapers\\Submission 3-program\\Sample Wallpapers\\wp1.jpg"), style=wSbFit)
+let logo = getCurrentDir() & "\\..\\src\\sample_slideshow\\bad_apple\\bap0022.png"
+let staticbitmap = StaticBitmap(notebook.page(0), bitmap=Bitmap(logo), style=wSbFit)
 staticbitmap.backgroundColor = -1
 
 notebook.page(1).wEvent_Paint do (event: wEvent):
