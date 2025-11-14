@@ -25,8 +25,9 @@ frame.dpiAutoScale:
 let statusBar = StatusBar(frame)
 let panel = Panel(frame)
 let staticbox1 = StaticBox(panel, label="Slideshow Loading")
-let staticbox2 = StaticBox(panel, label="Edit Slideshow")
-let staticbox3 = StaticBox(panel, label="Playback")
+let staticbox2 = StaticBox(panel, label="Slideshow Preview")
+let staticbox3 = StaticBox(panel, label="Edit Slideshow")
+let staticbox4 = StaticBox(panel, label="Playback")
 
 # 'Slideshow Loading' Panel
 let button_ldslides = Button(panel, label="Load Slideshow")
@@ -48,7 +49,9 @@ let button_lm = Button(panel, label="|<")
 let button_rm = Button(panel, label=">|")
 
 let button_replace = Button(panel, label="Replace Image")
-let button_insert = Button(panel, label="Insert Image(s) (After)")
+let button_insert = Button(panel, label="Insert Image(s)")
+let button_swn = Button(panel, label="Swap with Next")
+let button_swp = Button(panel, label="Swap with Previous")
 
 
 let button_play = Button(panel, label="Play Slideshow")
@@ -106,19 +109,22 @@ button_rm.wEvent_Button do (): changePreview(mode_right, 1)
 proc layout() =
   panel.autolayout """
     spacing: 10
-    H:|-[staticbox1,staticbox2, staticbox3]-|
-    V:|-[staticbox1(64)]-[staticbox2]-[staticbox3(64)]-|
+    H:|-[staticbox1,staticbox2,staticbox3,staticbox4]-|
+    V:|-[staticbox1(64)]-[staticbox2]-(-38)-[staticbox3]-[staticbox4(64)]
 
     outer: staticbox1
-    H:|-5-[button_ldslides(25%)]~[combobox_dfslides(25%)]~[button_svslides(25%)]-5-|
+    H:|-5-[button_ldslides(30%)]~[combobox_dfslides(30%)]~[button_svslides(30%)]-5-|
     V:|-5-[button_ldslides,combobox_dfslides,button_svslides]-5-|
 
     outer: staticbox2
     H:|~[button_lm(10%)][button_l(10%)][framenumber,preview(40%),preview_slider][button_r(10%)][button_rm(10%)]~|
-    V:|-5-[framenumber(16)]-[preview(preview.width*0.5625)]-[button_lm,button_l,preview_slider,button_r,button_rm]-5-|
-
+    V:|-5-[framenumber(16)]-[preview(preview.width*0.5625)]-(-64)-[button_lm,button_l,button_r,button_rm]-(40)-[preview_slider(32)]-5-|
 
     outer: staticbox3
+    H:|-5-[button_replace(45%),button_swp(45%)]-[button_insert(45%),button_swn(45%)]-5-|
+    V:|-5-[button_replace,button_insert]-[button_swp,button_swn]-5-|
+
+    outer: staticbox4
     H:|~[button_play(90%)]~|
     V:|-5-[button_play]-5-|
   """
