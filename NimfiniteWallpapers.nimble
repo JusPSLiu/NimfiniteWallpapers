@@ -10,4 +10,4 @@ bin           = @["NimfiniteWallpapers"]
 
 # Dependencies
 
-requires "nim >= 2.2.4", "winim"
+requires "nim >= 2.2.4", "winim", "wnim"

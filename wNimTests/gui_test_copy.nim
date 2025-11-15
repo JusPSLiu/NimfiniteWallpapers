@@ -138,7 +138,24 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
       else: indx = slideshow_len
   indx = clamp(indx, 0, slideshow_len)
   if (mode != mode_set): preview_slider.setValue(indx)
-  
+
+  # disable buttons
+  if (preview_slider.getValue() == 0):
+    button_lm.disable()
+    button_l.disable()
+    button_rm.enable()
+    button_r.enable()
+  elif (preview_slider.getValue() == slideshow_len):
+    button_rm.disable()
+    button_r.disable()
+    button_lm.enable()
+    button_l.enable()
+  else:
+    button_lm.enable()
+    button_l.enable()
+    button_rm.enable()
+    button_r.enable()
+
   # variable for the new preview images
   var newimg : string
   var newimgl : string
@@ -178,6 +195,7 @@ proc loadPreset(preset : string) =
       slideshow_preset = enum_custom
       textctrl_name.enable()
       # TODO: make default custom slideshow
+      changeName("Custom Slideshow")
       slideshow_len = 0
     of "Rickroll":
       slideshow_preset = enum_preset
@@ -189,6 +207,8 @@ proc loadPreset(preset : string) =
       textctrl_name.disable()
       changeName("Bad Apple")
       slideshow_len = 326
+  preview_slider.setRange(0..slideshow_len)
+  preview_slider.setValue(0)
   changePreview(index=0)
 
 
@@ -220,7 +240,6 @@ proc layout() =
     outer: staticbox1
     H:|-5-[button_ldslides(30%),label_ld,combobox_dfslides(30%),label_ps]~[label_name,label_ename,textctrl_name(30%)]~[button_svslides(30%)]-5-|
     V:|-5-[label_ps,button_svslides]-(-8)-[combobox_dfslides,label_name]-[label_ld,label_ename]-(-8)-[button_ldslides,textctrl_name]
-    
 
     outer: staticbox2
     H:|~[button_lm(10%)][button_l(10%),previewl(10%)][framenumber,preview(40%),preview_slider][button_r(10%),previewr(10%)][button_rm(10%)]~|
