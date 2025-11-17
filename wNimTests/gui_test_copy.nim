@@ -27,8 +27,8 @@ var slideshow_name = "Bad Apple"
 let app = App(wSystemDpiAware)
 let frame = Frame(title="Nimfinite Wallpapers", style=wDefaultFrameStyle or wModalFrame)
 frame.dpiAutoScale:
-  frame.size = (640, 610)
-  frame.minSize = (500, 580)
+  frame.size = (640, 660)
+  frame.minSize = (500, 630)
 
 # Panels
 let statusBar = StatusBar(frame)
@@ -58,7 +58,9 @@ let preview = StaticBitmap(panel, bitmap=Bitmap(image), style=wSbFit)
 let previewl = StaticBitmap(panel, bitmap=Bitmap(image), style=wSbFit)
 let previewr = StaticBitmap(panel, bitmap=Bitmap(image), style=wSbFit)
 
-let preview_slider = Slider(panel, value=0, range=0..slideshow_len, style=wSlAutoTicks)
+let label_duration = StaticText(panel, label="Image Duration: (0 seconds)", style=wAlignLeft)
+let textctrl_duration = TextCtrl(panel, value="0", style=wBorderSunken)
+let preview_slider = Slider(panel, value=0, range=0..slideshow_len, style=wSlAutoTicks or wSlTop)
 preview_slider.setTickFreq(1)
 let button_l = Button(panel, label="<")
 let button_r = Button(panel, label=">")
@@ -76,7 +78,7 @@ let button_play = Button(panel, label="Play Slideshow")
 var playing : bool = false
 
 proc loadFile() =
-  var fd = FileDialog(style=wFdOpen or wFdMultiple or wFdFileMustExist)
+  var fd = FileDialog(style=wFdOpen or wFdMultiple or wFdFileMustExist, wildcard="Text documents (*.txt)|*.txt")
   echo fd.display()
 
   let imgs = fd.getPaths()
@@ -86,7 +88,7 @@ proc loadFile() =
     #frame.refresh(eraseBackground=true)
 
 proc saveFile() =
-  var fd = FileDialog(style=wFdSave)
+  var fd = FileDialog(style=wFdSave, wildcard="Text documents (*.txt)|*.txt")
   echo fd.display()
 
 proc changeName(newname : string) =
@@ -139,22 +141,19 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
   indx = clamp(indx, 0, slideshow_len)
   if (mode != mode_set): preview_slider.setValue(indx)
 
-  # disable buttons
+  # disable/enable buttons
+  # Left buttons
   if (preview_slider.getValue() == 0):
-    button_lm.disable()
-    button_l.disable()
-    button_rm.enable()
-    button_r.enable()
-  elif (preview_slider.getValue() == slideshow_len):
-    button_rm.disable()
-    button_r.disable()
-    button_lm.enable()
-    button_l.enable()
+    button_lm.disable(); button_l.disable(); button_swp.disable()
   else:
-    button_lm.enable()
-    button_l.enable()
-    button_rm.enable()
-    button_r.enable()
+    button_lm.enable(); button_l.enable()
+    if (slideshow_preset == enum_custom): button_swp.enable()
+  # Right buttons
+  if (preview_slider.getValue() == slideshow_len):
+    button_rm.disable(); button_r.disable(); button_swn.disable()
+  else:
+    button_rm.enable(); button_r.enable()
+    if (slideshow_preset == enum_custom): button_swn.enable()
 
   # variable for the new preview images
   var newimg : string
@@ -189,6 +188,23 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
     previewr.setBitmap(Bitmap(newimgr))
   else: previewr.hide()
 
+proc setSlideshowLength(len : int, new_indx : int = 0) =
+  slideshow_len = len
+  preview_slider.setRange(0..slideshow_len)
+  preview_slider.setValue(new_indx)
+  changePreview(index=new_indx)
+  if (len == 0):
+    button_replace.disable()
+    button_del.disable()
+
+proc setFrameDuration(newduration : string) =
+  try:
+    var my_duration = parseFloat(newduration)
+    textctrl_duration.setValue($my_duration)
+    label_duration.setLabel("Image Duration: (" & $my_duration & " seconds)")
+  except:
+    textctrl_duration.setValue("1")
+
 proc loadPreset(preset : string) =
   case preset
     of "Custom":
@@ -196,21 +212,37 @@ proc loadPreset(preset : string) =
       textctrl_name.enable()
       # TODO: make default custom slideshow
       changeName("Custom Slideshow")
-      slideshow_len = 0
+      setSlideshowLength(0)
+
+      # set durations
+      label_duration.setLabel("Image Duration: (0 seconds)")
+      textctrl_duration.setValue("0.0")
+      textctrl_duration.enable()
     of "Rickroll":
       slideshow_preset = enum_preset
       textctrl_name.disable()
       changeName("Rickroll")
-      slideshow_len = 318
+      setSlideshowLength(318)
+      label_duration.setLabel("Image Duration: (0.664 seconds)"); textctrl_duration.setValue("0.664"); textctrl_duration.disable()
     of "Bad Apple":
       slideshow_preset = enum_preset
       textctrl_name.disable()
       changeName("Bad Apple")
-      slideshow_len = 326
-  preview_slider.setRange(0..slideshow_len)
-  preview_slider.setValue(0)
-  changePreview(index=0)
+      setSlideshowLength(326)
+      label_duration.setLabel("Image Duration: (0.664 seconds)"); textctrl_duration.setValue("0.664"); textctrl_duration.disable()
 
+proc loadImage(index : int, replace : bool = false) =
+  var fd : wFileDialog
+  if (replace): fd = FileDialog(style=wFdOpen, wildcard="All Picture Files|*.bmp;*.dib;*jpg;*jpeg;*jpe;*.jfif;*.gif;*.tif;*.tiff;*.png;*.ico;*.heic;*.hif;*.avif;*.webp")
+  else: fd = FileDialog(style=wFdOpen or wFdMultiple or wFdFileMustExist, wildcard="All Picture Files|*.bmp;*.dib;*jpg;*jpeg;*jpe;*.jfif;*.gif;*.tif;*.tiff;*.png;*.ico;*.heic;*.hif;*.avif;*.webp")
+
+  echo fd.display()
+
+  let imgs = fd.getPaths()
+  for img in imgs:
+    echo img
+    #staticbitmap.setBitmap(bitmap=Bitmap(img))
+    #frame.refresh(eraseBackground=true)
 
 proc togglePlay() =
   playing = not playing
@@ -219,31 +251,41 @@ proc togglePlay() =
   else:
     button_play.setLabel("Play Slideshow")
 
-
+# 'Slideshow Loading' Panel
 button_ldslides.wEvent_Button do (): loadFile()
 button_svslides.wEvent_Button do (): saveFile()
 combobox_dfslides.wEvent_ComboBox do (): loadPreset(combobox_dfslides.getValue())
 
+# 'Edit Slideshow' Panel
 preview_slider.wEvent_Slider do (): changePreview(index = preview_slider.getValue())
+textctrl_duration.wEvent_TextEnter do (): setFrameDuration(textctrl_duration.getValue())
 button_l.wEvent_Button do (): changePreview(mode_left, 0)
 button_r.wEvent_Button do (): changePreview(mode_right, 0)
 button_lm.wEvent_Button do (): changePreview(mode_left, 1)
 button_rm.wEvent_Button do (): changePreview(mode_right, 1)
+
+button_insert.wEvent_Button do (): loadImage(0, true)
+button_replace.wEvent_Button do (): loadImage(0, true)
+#button_swn.wEvent_Button do (): 
+#button_swp.wEvent_Button do (): 
+#button_del.wEvent_Button do (): 
+
+# 'Playback' panel
 button_play.wEvent_Button do (): togglePlay()
 
 proc layout() =
   panel.autolayout """
     spacing: 10
     H:|-[staticbox1,staticbox2,staticbox3,staticbox4]-|
-    V:|-[staticbox1(128)]-[staticbox2]-(-38)-[staticbox3(128)]-[staticbox4(64)]
+    V:|-[staticbox1(128)]-[staticbox2(preview.width*0.5625+136)]-(-38)-[staticbox3(136)]-[staticbox4(64)]
 
     outer: staticbox1
     H:|-5-[button_ldslides(30%),label_ld,combobox_dfslides(30%),label_ps]~[label_name,label_ename,textctrl_name(30%)]~[button_svslides(30%)]-5-|
     V:|-5-[label_ps,button_svslides]-(-8)-[combobox_dfslides,label_name]-[label_ld,label_ename]-(-8)-[button_ldslides,textctrl_name]
 
     outer: staticbox2
-    H:|~[button_lm(10%)][button_l(10%),previewl(10%)][framenumber,preview(40%),preview_slider][button_r(10%),previewr(10%)][button_rm(10%)]~|
-    V:|-5-[framenumber(16)]-0-[preview(preview.width*0.5625)]-(preview.height*-0.6)-[previewl(previewl.width*0.5625),previewr(previewl.width*0.5625)]-[button_lm,button_l,button_r,button_rm]-(preview.height*0.35-32)-[preview_slider(32)]-5-|
+    H:|~[button_lm(10%)][button_l(10%),previewl(10%)][framenumber,preview(40%),preview_slider,label_duration,textctrl_duration][button_r(10%),previewr(10%)][button_rm(10%)]~|
+    V:|-5-[framenumber(16)]-0-[preview(preview.width*0.5625)]-(preview.height*-0.6)-[previewl(previewl.width*0.5625),previewr(previewl.width*0.5625)]-[button_lm,button_l,button_r,button_rm]-(preview.height*0.35-36)-[preview_slider(32)]-[label_duration]-(-8)-[textctrl_duration]
 
     outer: staticbox3
     H:|-5-[button_replace(45%),button_swp(45%)]-[button_insert(45%),button_swn(45%),button_del(45%)]-5-|
@@ -256,9 +298,8 @@ proc layout() =
 
 
 # set up
-changeName("Bad Apple")
 changePreview(index=0)
-
+loadPreset("Bad Apple")
 
 panel.wEvent_Size do ():
   layout()
