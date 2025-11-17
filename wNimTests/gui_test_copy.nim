@@ -166,7 +166,7 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
     newimgr = get_premade_frame(indx+1)
 
   # update preview
-  framenumber.setTitle("Frame " & intToStr(indx) & "/" & intToStr(slideshow_len))
+  framenumber.setTitle("Frame " & intToStr(indx+1) & "/" & intToStr(slideshow_len+1))
   #updating the main preview
   if (fileExists(newimg)):
     preview.getBitmap().delete()
