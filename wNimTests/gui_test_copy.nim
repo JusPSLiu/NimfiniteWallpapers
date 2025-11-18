@@ -3,9 +3,10 @@ import wNim/[wApp, wFrame, wPanel, wStatusBar, wMenu,
   wButton, wRadioButton, wCheckBox, wComboBox, wCheckComboBox, wListBox,
   wNoteBook, wTextCtrl, wSpinCtrl, wHotkeyCtrl, wSlider, wGauge,
   wDatePickerCtrl, wTimePickerCtrl, wFileDialog, wImage]
+
 import std/os, strutils  # for strings and os
 import winim
-#import threads # for multithreading
+include wallpaper_set
 
 # enums because enums
 type
