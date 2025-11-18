@@ -4,6 +4,7 @@ import wNim/[wApp, wFrame, wPanel, wStatusBar, wMenu,
   wNoteBook, wTextCtrl, wSpinCtrl, wHotkeyCtrl, wSlider, wGauge,
   wDatePickerCtrl, wTimePickerCtrl, wFileDialog, wImage]
 import std/os, strutils
+include wallpaper_set
 
 # enums because enums
 type
