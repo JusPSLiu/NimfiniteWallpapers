@@ -1,8 +1,7 @@
-import wNim/[wApp, wFrame, wPanel, wStatusBar, wMenu,
-  wBitmap, wStaticBox, wStaticLine, wStaticBitmap, wStaticText,
-  wButton, wRadioButton, wCheckBox, wComboBox, wCheckComboBox, wListBox,
-  wNoteBook, wTextCtrl, wSpinCtrl, wHotkeyCtrl, wSlider, wGauge,
-  wDatePickerCtrl, wTimePickerCtrl, wFileDialog, wImage]
+import wNim/[wApp, wFrame, wPanel, wBitmap, wStaticBox, wStaticBitmap, wStaticText,
+  wButton, wComboBox,
+  wTextCtrl, wSlider,
+  wFileDialog, wImage]
 import std/os, strutils  # for strings and os
 import winim
 #import threads # for multithreading
@@ -16,7 +15,7 @@ type
     enum_custom
 
 # consts
-let RESOURCE_DIRECTORY = getCurrentDir() & "\\..\\src\\"
+let RESOURCE_DIRECTORY = getCurrentDir() & "\\src\\"
 
 
 # custom vars to adjust throughout development to test
@@ -34,7 +33,6 @@ frame.dpiAutoScale:
   frame.minSize = (500, 630)
 
 # Panels
-let statusBar = StatusBar(frame)
 let panel = Panel(frame)
 let staticbox1 = StaticBox(panel, label="Slideshow Loading")
 let staticbox2 = StaticBox(panel, label="Edit Slideshow")
