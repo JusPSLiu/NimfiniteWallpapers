@@ -1,5 +1,5 @@
 import wNim/[wApp, wFrame, wPanel, wBitmap, wStaticBox, wStaticBitmap, wStaticText,
-  wButton, wComboBox, wTextCtrl, wSlider, wFileDialog, wImage]
+  wButton, wComboBox, wTextCtrl, wSlider, wFileDialog, wImage, wMessageDialog]
 import std/[times, os], strutils  # for strings, time and os
 import winim
 import wallpaper_set
@@ -15,7 +15,6 @@ type
 
 # consts
 let RESOURCE_DIRECTORY = getCurrentDir() & "\\src\\"
-let RESOURCE_DIRECTORY_CSTR : cstring = RESOURCE_DIRECTORY
 
 # custom vars to adjust throughout development to test
 var slideshow_index = 0
@@ -82,7 +81,7 @@ let button_del = Button(panel, label="Delete Image")
 
 # 'Playback' panel
 let button_play = Button(panel, label="Play Slideshow")
-var playing : bool = false
+#var playing : bool = false
 
 
 proc enableEditing(enable : bool = true) =
@@ -178,6 +177,9 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
     newimgl = wp_get_frame_file(slideshow_list, indx-1)
     newimgr = wp_get_frame_file(slideshow_list, indx+1)
 
+  # default in case missing
+  let default_missing = RESOURCE_DIRECTORY & "sample_slideshow\\not_found.png"
+
   # update preview
   if (slideshow_preset == enum_custom and slideshow_list.length == 0): framenumber.setTitle("Frame 0/0")
   else: framenumber.setTitle("Frame " & intToStr(indx+1) & "/" & intToStr(slideshow_len+1))
@@ -185,21 +187,27 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
   if (fileExists(newimg)):
     preview.getBitmap().delete()
     preview.setBitmap(Bitmap(newimg))
-  else:
-    newimg = RESOURCE_DIRECTORY & "sample_slideshow\\not_found.png"
-    if (fileExists(newimg)):
-        preview.getBitmap().delete()
-        preview.setBitmap(Bitmap(newimg))
+  elif (fileExists(default_missing)):
+    preview.getBitmap().delete()
+    preview.setBitmap(Bitmap(default_missing))
   # updating the secondary sub-previews
   if (fileExists(newimgl)):
     previewl.show()
     previewl.getBitmap().delete()
     previewl.setBitmap(Bitmap(newimgl))
+  elif (indx > 0 and fileExists(default_missing)):
+    previewl.show()
+    previewl.getBitmap().delete()
+    previewl.setBitmap(Bitmap(default_missing))
   else: previewl.hide()
   if (fileExists(newimgr)):
     previewr.show()
     previewr.getBitmap().delete()
     previewr.setBitmap(Bitmap(newimgr))
+  elif (indx < slideshow_len and fileExists(default_missing)):
+    previewr.show()
+    previewr.getBitmap().delete()
+    previewr.setBitmap(Bitmap(default_missing))
   else: previewr.hide()
 
 proc setSlideshowLength(len : int, new_indx : int = 0) =
@@ -269,7 +277,7 @@ proc loadImage(replace : bool = false) =
 
   # replace logic
   if (replace):
-    if (not fileExists(imgs[0])): return
+    if (len(imgs) == 0 or not fileExists(imgs[0])): return
     wp_replace_frame(slideshow_list, imgs[0], slideshow_index)
 
     # update ui and exit
@@ -339,7 +347,8 @@ proc loadFile() =
 
   # alright time to load
   changeName(contents[0])
-  
+
+  var error_in_contents = false
   for line in contents:
     if '\0' in line:
       let linedata = line.split('\0')
@@ -360,10 +369,18 @@ proc loadFile() =
         # update length and position
         slideshow_len = slideshow_list.length - 1
         slideshow_index += 1
+      
+      # check if file exists
+      if (not fileExists(newframe.fileName)):
+        error_in_contents = true
 
   # now refresh the gui
   changePreview(index=0)
   setSlideshowLength(slideshow_len)
+
+  if (error_in_contents):
+    let err_msg = MessageDialog(frame, "There was an error in reading the file; one or more images is missing", "lolol",style=wOK)
+    err_msg.display()
 
 proc saveFile() =
   var fd = FileDialog(style=wFdSave, wildcard="Nimfinite Wallpaper template (*.nimwal)|*.nimwal")
