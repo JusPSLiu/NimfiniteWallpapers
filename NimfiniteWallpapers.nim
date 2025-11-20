@@ -84,20 +84,6 @@ let button_del = Button(panel, label="Delete Image")
 let button_play = Button(panel, label="Play Slideshow")
 var playing : bool = false
 
-proc loadFile() =
-  var fd = FileDialog(style=wFdOpen or wFdMultiple or wFdFileMustExist, wildcard="Text documents (*.txt)|*.txt")
-  echo fd.display()
-
-  let imgs = fd.getPaths()
-  for img in imgs:
-    echo img
-    #staticbitmap.setBitmap(bitmap=Bitmap(img))
-    #frame.refresh(eraseBackground=true)
-  
-
-proc saveFile() =
-  var fd = FileDialog(style=wFdSave, wildcard="Text documents (*.txt)|*.txt")
-  echo fd.display()
 
 proc enableEditing(enable : bool = true) =
   if (enable):
@@ -331,6 +317,74 @@ proc deleteImage() =
   # emergency if go down to zero
   if (slideshow_list.length == 0):
     label_duration.setLabel("Image Duration: (0.0 seconds)"); textctrl_duration.setValue("0.0"); textctrl_duration.disable()
+
+# Saving/Loading Logic
+proc loadFile() =
+  var fd = FileDialog(style=wFdOpen or wFdFileMustExist, wildcard="Nimfinite Wallpaper template (*.nimwal)|*.nimwal")
+  echo fd.display()
+
+  let files = fd.getPaths()
+  if len(files) == 0: return
+  let file = files[0]
+
+  let contents = readFile(file).split('\n')
+  if len(contents) == 0: return
+  
+  # make sure its set to custom
+  loadPreset("Custom")
+
+  # wipe it clean
+  while (slideshow_list.length > 0):
+    discard wp_delete_frame(slideshow_list, 0)
+
+  # alright time to load
+  changeName(contents[0])
+  
+  for line in contents:
+    if '\0' in line:
+      let linedata = line.split('\0')
+      if (len(linedata) != 2): continue
+
+      # new frame
+      var newframe : WallpaperFrame = default(WallpaperFrame)
+      newframe.fileName = linedata[0]
+      newframe.duration = parseFloat(linedata[1])
+
+      # add image to next index
+      if (slideshow_list.length == 0):
+        # adding first frame (a special case)
+        wp_add_frame(slideshow_list, newframe, 0)
+        enableEditing()
+      else:
+        wp_add_frame(slideshow_list, newframe, slideshow_index + 1)
+        # update length and position
+        slideshow_len = slideshow_list.length - 1
+        slideshow_index += 1
+
+  # now refresh the gui
+  changePreview(index=0)
+  setSlideshowLength(slideshow_len)
+
+proc saveFile() =
+  var fd = FileDialog(style=wFdSave, wildcard="Nimfinite Wallpaper template (*.nimwal)|*.nimwal")
+  echo fd.display()
+
+  let files = fd.getPaths()
+  if len(files) == 0: return
+  var path = files[0]
+
+  # make sure it ends in .nimwal
+  if '.' in path:
+    path = path.split('.')[0]
+  path &= ".nimwal"
+
+  # build up string of save data
+  var content : string = slideshow_list.displayName & '\n'
+  for cursor in 0 .. slideshow_len:
+    content &= wp_get_frame(slideshow_list, cursor).fileName & '\0'
+    content &= $wp_get_frame(slideshow_list, cursor).duration & '\n'
+
+  writeFile(path, content)
 
 
 # slideshow logic
