@@ -1,9 +1,8 @@
 import wNim/[wApp, wFrame, wPanel, wBitmap, wStaticBox, wStaticBitmap, wStaticText,
-  wButton, wComboBox,
-  wTextCtrl, wSlider,
-  wFileDialog, wImage]
-import std/os, strutils  # for strings and os
+  wButton, wComboBox, wTextCtrl, wSlider, wFileDialog, wImage]
+import std/[times, os], strutils  # for strings, time and os
 import winim
+import wallpaper_set
 #import threads # for multithreading
 
 # enums because enums
@@ -16,13 +15,20 @@ type
 
 # consts
 let RESOURCE_DIRECTORY = getCurrentDir() & "\\src\\"
-
+let RESOURCE_DIRECTORY_CSTR : cstring = RESOURCE_DIRECTORY
 
 # custom vars to adjust throughout development to test
+var slideshow_index = 0
 var slideshow_len = 326
 var slideshow_preset = enum_preset
 var slideshow_name = "Bad Apple"
+var slideshow_name_cstr : cstring = "Bad Apple"
+# the default custom slideshow list
+var slideshow_list : Wallpaper = default(Wallpaper)
+slideshow_list.length = 0
+slideshow_list.displayName = "Custom Slideshow"
 
+# the secondary thread
 var thr = new Thread[void]
 
 # Window
@@ -96,11 +102,12 @@ proc enableEditing(enable : bool = true) =
   if (enable):
     button_svslides.enable()
     textctrl_name.enable()
-    button_replace.enable()
     button_insert.enable()
-    button_swn.enable()
-    button_swp.enable()
-    button_del.enable()
+    if (slideshow_list.length > 0):
+      button_replace.enable()
+      button_del.enable()
+    if (slideshow_index < slideshow_len): button_swn.enable()
+    if (slideshow_index > 0): button_swp.enable()
   else:
     button_svslides.disable()
     textctrl_name.disable()
@@ -112,11 +119,13 @@ proc enableEditing(enable : bool = true) =
 
 proc changeName(newname : string) =
   slideshow_name = newname
+  slideshow_name_cstr = newname
   label_name.setLabel(newname)
   textctrl_name.setValue(newname)
   if (slideshow_preset == enum_custom):
     combobox_dfslides.setValue("Custom")
     enableEditing()
+    slideshow_list.displayName = newname
   else:
     combobox_dfslides.setValue(newname)
     enableEditing(false)
@@ -138,25 +147,28 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
   var indx : int
   case mode
     of mode_left: # go left
-      if (index == 0): indx = preview_slider.getValue() - 1
+      if (index == 0): indx = slideshow_index - 1
       else: indx = 0
     of mode_set: # set to this val
       indx = index
     of mode_right: # go right
-      if (index == 0): indx = preview_slider.getValue() + 1
+      if (index == 0): indx = slideshow_index + 1
       else: indx = slideshow_len
   indx = clamp(indx, 0, slideshow_len)
-  if (mode != mode_set): preview_slider.setValue(indx)
+  slideshow_index = indx
 
+  # set is triggered by slider, so this avoids infinite recursion
+  if (mode != mode_set): preview_slider.setValue(indx)
+  
   # disable/enable buttons
   # Left buttons
-  if (preview_slider.getValue() == 0):
+  if (slideshow_index == 0):
     button_lm.disable(); button_l.disable(); button_swp.disable()
   else:
     button_lm.enable(); button_l.enable()
     if (slideshow_preset == enum_custom): button_swp.enable()
   # Right buttons
-  if (preview_slider.getValue() == slideshow_len):
+  if (slideshow_index == slideshow_len):
     button_rm.disable(); button_r.disable(); button_swn.disable()
   else:
     button_rm.enable(); button_r.enable()
@@ -171,9 +183,17 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
     newimg = get_premade_frame(indx)
     newimgl = get_premade_frame(indx-1)
     newimgr = get_premade_frame(indx+1)
+  elif (slideshow_list.length > 0):
+    let lenn : float = wp_get_frame(slideshow_list, indx).duration
+    label_duration.setLabel("Image Duration: (" & $lenn & " seconds)"); textctrl_duration.setValue($lenn); textctrl_duration.enable()
+
+    newimg = wp_get_frame_file(slideshow_list, indx)
+    newimgl = wp_get_frame_file(slideshow_list, indx-1)
+    newimgr = wp_get_frame_file(slideshow_list, indx+1)
 
   # update preview
-  framenumber.setTitle("Frame " & intToStr(indx+1) & "/" & intToStr(slideshow_len+1))
+  if (slideshow_preset == enum_custom and slideshow_list.length == 0): framenumber.setTitle("Frame 0/0")
+  else: framenumber.setTitle("Frame " & intToStr(indx+1) & "/" & intToStr(slideshow_len+1))
   #updating the main preview
   if (fileExists(newimg)):
     preview.getBitmap().delete()
@@ -196,35 +216,48 @@ proc changePreview(mode : switchmode = mode_set, index : int) =
   else: previewr.hide()
 
 proc setSlideshowLength(len : int, new_indx : int = 0) =
+  var new_indx_clamped = new_indx
+  if (new_indx_clamped > len): new_indx_clamped = len
   slideshow_len = len
   preview_slider.setRange(0..slideshow_len)
-  preview_slider.setValue(new_indx)
-  changePreview(index=new_indx)
-  if (len == 0):
+  preview_slider.setValue(new_indx_clamped)
+  slideshow_index = new_indx_clamped
+  changePreview(index=new_indx_clamped)
+  # if custom and blank, replace and delete should be disabled
+  if (slideshow_preset == enum_custom and slideshow_list.length == 0):
     button_replace.disable()
     button_del.disable()
 
 proc setFrameDuration(newduration : string) =
+  # if its a preset you cannot adjust duration
+  if (slideshow_preset == enum_preset): return
   try:
     var my_duration = parseFloat(newduration)
     textctrl_duration.setValue($my_duration)
     label_duration.setLabel("Image Duration: (" & $my_duration & " seconds)")
+    wp_change_duration(slideshow_list, my_duration, slideshow_index)
   except:
-    textctrl_duration.setValue("1")
+    # if fails, reset to what it was before
+    textctrl_duration.setValue($wp_get_frame(slideshow_list, slideshow_index).duration)
 
 proc loadPreset(preset : string) =
   case preset
     of "Custom":
       slideshow_preset = enum_custom
       textctrl_name.enable()
-      # TODO: make default custom slideshow
-      changeName("Custom Slideshow")
-      setSlideshowLength(0)
+      # make default custom slideshow
+      changeName(slideshow_list.displayName)
+      var clamped_len = slideshow_list.length-1
+      if (clamped_len < 0): clamped_len = 0
+      setSlideshowLength(clamped_len)
 
       # set durations
-      label_duration.setLabel("Image Duration: (0 seconds)")
-      textctrl_duration.setValue("0.0")
-      textctrl_duration.enable()
+      changePreview(index=0)
+      if (slideshow_list.length == 0):
+        label_duration.setLabel("Image Duration: (0.0 seconds)"); textctrl_duration.setValue("0.0"); textctrl_duration.disable()
+      else:
+        let lenn : float = slideshow_list.files[slideshow_index].duration
+        label_duration.setLabel("Image Duration: (" & $lenn & " seconds)"); textctrl_duration.setValue($lenn); textctrl_duration.enable()
     of "Rickroll":
       slideshow_preset = enum_preset
       textctrl_name.disable()
@@ -238,7 +271,7 @@ proc loadPreset(preset : string) =
       setSlideshowLength(326)
       label_duration.setLabel("Image Duration: (0.664 seconds)"); textctrl_duration.setValue("0.664"); textctrl_duration.disable()
 
-proc loadImage(index : int, replace : bool = false) =
+proc loadImage(replace : bool = false) =
   var fd : wFileDialog
   if (replace): fd = FileDialog(style=wFdOpen, wildcard="All Picture Files|*.bmp;*.dib;*jpg;*jpeg;*jpe;*.jfif;*.gif;*.tif;*.tiff;*.png;*.ico;*.heic;*.hif;*.avif;*.webp")
   else: fd = FileDialog(style=wFdOpen or wFdMultiple or wFdFileMustExist, wildcard="All Picture Files|*.bmp;*.dib;*jpg;*jpeg;*jpe;*.jfif;*.gif;*.tif;*.tiff;*.png;*.ico;*.heic;*.hif;*.avif;*.webp")
@@ -246,42 +279,118 @@ proc loadImage(index : int, replace : bool = false) =
   echo fd.display()
 
   let imgs = fd.getPaths()
+
+  # replace logic
+  if (replace):
+    if (not fileExists(imgs[0])): return
+    wp_replace_frame(slideshow_list, imgs[0], slideshow_index)
+
+    # update ui and exit
+    changePreview(index=slideshow_index)
+    return
+
+  # append logic
   for img in imgs:
-    echo img
-    #staticbitmap.setBitmap(bitmap=Bitmap(img))
-    #frame.refresh(eraseBackground=true)
+    # skip if no file
+    if (not fileExists(img)): continue
 
-proc slideshow() {.thread.} =
-  # var lastfile : LPCWSTR
-  # 
-  # let folder = RESOURCE_DIRECTORY & "\\sample_slideshow\\bad_apple"
-  # 
-  # for kind, path in walkDir(folder):
-  #     # widen the string because Windows only reads wide strings
-  #     let widestr: LPCWSTR = newWideCString(path)
-  # 
-  #     if (kind == pcFile):
-  #         echo "File: ", path
-  #         lastfile = widestr
-  #         if (negativeCatchupTime * -1 > min_time_ms):
-  #             # skip frames if took too long to set
-  #             negativeCatchupTime += min_time_ms
-  #         else:
-  #             discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
-  #             calculatedSleep(min_time_ms)
+    # new frame
+    var newframe : WallpaperFrame = default(WallpaperFrame)
+    newframe.fileName = img
+    newframe.duration = 10.0
 
-  # make sure last file is always done, and not skipped
-  #discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, lastfile, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
-  while (playing):
-    echo "RUNNING"
-    sleep(500)
-    echo "STILL"
-    sleep(500)
+    # add image to next index
+    if (slideshow_list.length == 0):
+      # adding first frame (a special case)
+      wp_add_frame(slideshow_list, newframe, 0)
+      enableEditing()
+    else:
+      wp_add_frame(slideshow_list, newframe, slideshow_index + 1)
+      # update length and position
+      slideshow_len = slideshow_list.length - 1
+      slideshow_index += 1
+  
+  # update ui
+  setSlideshowLength(slideshow_len, slideshow_index)
+  changePreview(index=slideshow_index)
+
+proc swapImage(next : bool = false) =
+  var index = slideshow_index
+  if (not next): index -= 1
+  wp_swap_frame_with_next(slideshow_list, index)
+  changePreview(index=slideshow_index)
+
+proc deleteImage() =
+  discard wp_delete_frame(slideshow_list, slideshow_index)
+  var clamped_len = slideshow_list.length-1
+  if (clamped_len < 0): clamped_len = 0
+  setSlideshowLength(clamped_len, slideshow_index)
+  changePreview(index=slideshow_index)
+
+  # emergency if go down to zero
+  if (slideshow_list.length == 0):
+    label_duration.setLabel("Image Duration: (0.0 seconds)"); textctrl_duration.setValue("0.0"); textctrl_duration.disable()
+
+
+# slideshow logic
+var lastTime: Time = getTime()
+var currentTime: Time
+var negativeCatchupTime: int = 0
+
+proc calculatedSleep(sleepLen_ms : int): void =
+    # calculate delay offset from delay of wallpaper change
+    currentTime = getTime()
+    let offsetSleeplen_ms : int = sleepLen_ms - int((currentTime - lastTime).inMilliseconds) + negativeCatchupTime
+    # sleep using offset
+    if (offsetSleeplen_ms > 0):
+        sleep(offsetSleeplen_ms)
+    echo "\nSLEEPING FOR: "
+    echo offsetSleeplen_ms
+    # if this one frame took way too long, try to catch up if possible
+    if (offsetSleeplen_ms < 0):
+        negativeCatchupTime = min(offsetSleeplen_ms, negativeCatchupTime)
+    else:
+        negativeCatchupTime = 0
+    # reset lastTime for next time
+    lastTime = getTime()
+
+proc slideshow() =
+  if (slideshow_preset == enum_custom):
+    var cursor : int = 0
+
+  else:
+    # RESTATE THE CURRENT DIRECTORY BECAUSE NIM WONT LET ME GIVE STRINGS TO THE SECONDARY THREAD
+    var folder = RESOURCE_DIRECTORY
+    case slideshow_name
+    of "Bad Apple":
+      folder &= "sample_slideshow\\bad_apple"
+    of "Rickroll":
+      folder &= "sample_slideshow\\rickroll"
+
+    let min_time_ms = 664
+
+    #while (playing):
+      for kind, path in walkDir(folder):
+        # widen the string because Windows only reads wide strings
+        let widestr: LPCWSTR = newWideCString(path)
+    
+        if (kind == pcFile):
+          if (negativeCatchupTime * -1 > min_time_ms):
+            # skip frames if took too long to set
+            negativeCatchupTime += min_time_ms
+          else:
+            discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
+            calculatedSleep(min_time_ms)
+        # break out if stopping
+        #if (not playing): break
+
+
 
 proc togglePlay() =
   playing = not playing
   if (playing):
-    createThread(thr[], slideshow)
+    slideshow()
+    #createThread(thr[], slideshow)
     button_play.setLabel("Stop Slideshow")
     # disable playing and loading
     button_ldslides.disable()
@@ -291,7 +400,7 @@ proc togglePlay() =
   else:
     button_play.disable()
     button_play.setLabel(". . . Stopping . . .")
-    joinThreads(thr[])
+    #joinThreads(thr[])
     button_play.setLabel("Play Slideshow")
     sleep(1) # for some reason without this, it glitches
     
@@ -308,6 +417,7 @@ proc togglePlay() =
 button_ldslides.wEvent_Button do (): loadFile()
 button_svslides.wEvent_Button do (): saveFile()
 combobox_dfslides.wEvent_ComboBox do (): loadPreset(combobox_dfslides.getValue())
+textctrl_name.wEvent_TextEnter do (): changeName(textctrl_name.getValue())
 
 # 'Edit Slideshow' Panel
 preview_slider.wEvent_Slider do (): changePreview(index = preview_slider.getValue())
@@ -317,11 +427,11 @@ button_r.wEvent_Button do (): changePreview(mode_right, 0)
 button_lm.wEvent_Button do (): changePreview(mode_left, 1)
 button_rm.wEvent_Button do (): changePreview(mode_right, 1)
 
-button_insert.wEvent_Button do (): loadImage(0, true)
-button_replace.wEvent_Button do (): loadImage(0, true)
-#button_swn.wEvent_Button do (): 
-#button_swp.wEvent_Button do (): 
-#button_del.wEvent_Button do (): 
+button_insert.wEvent_Button do (): loadImage(false)
+button_replace.wEvent_Button do (): loadImage(true)
+button_swn.wEvent_Button do (): swapImage(true)
+button_swp.wEvent_Button do (): swapImage(false)
+button_del.wEvent_Button do (): deleteImage()
 
 # 'Playback' panel
 button_play.wEvent_Button do (): togglePlay()
