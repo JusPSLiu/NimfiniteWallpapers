@@ -29,7 +29,7 @@ slideshow_list.length = 0
 slideshow_list.displayName = "Custom Slideshow"
 
 # the secondary thread
-var thr = new Thread[void]
+#var thr = new Thread[void]
 
 # Window
 let app = App(wSystemDpiAware)
@@ -93,6 +93,7 @@ proc loadFile() =
     echo img
     #staticbitmap.setBitmap(bitmap=Bitmap(img))
     #frame.refresh(eraseBackground=true)
+  
 
 proc saveFile() =
   var fd = FileDialog(style=wFdSave, wildcard="Text documents (*.txt)|*.txt")
@@ -355,9 +356,20 @@ proc calculatedSleep(sleepLen_ms : int): void =
     lastTime = getTime()
 
 proc slideshow() =
-  if (slideshow_preset == enum_custom):
-    var cursor : int = 0
+  # reset timer compensator
+  lastTime = getTime()
 
+  if (slideshow_preset == enum_custom):
+    for cursor in 0 .. slideshow_len:
+      let widestr: LPCWSTR = newWideCString(wp_get_frame(slideshow_list, cursor).fileName)
+      let duration = int(wp_get_frame(slideshow_list, cursor).duration * 1000)
+
+      if (negativeCatchupTime * -1 > duration):
+        # skip frames if took too long to set
+        negativeCatchupTime += duration
+      else:
+        discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
+        calculatedSleep(duration)
   else:
     # RESTATE THE CURRENT DIRECTORY BECAUSE NIM WONT LET ME GIVE STRINGS TO THE SECONDARY THREAD
     var folder = RESOURCE_DIRECTORY
@@ -370,46 +382,47 @@ proc slideshow() =
     let min_time_ms = 664
 
     #while (playing):
-      for kind, path in walkDir(folder):
-        # widen the string because Windows only reads wide strings
-        let widestr: LPCWSTR = newWideCString(path)
-    
-        if (kind == pcFile):
-          if (negativeCatchupTime * -1 > min_time_ms):
-            # skip frames if took too long to set
-            negativeCatchupTime += min_time_ms
-          else:
-            discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
-            calculatedSleep(min_time_ms)
-        # break out if stopping
-        #if (not playing): break
+    for kind, path in walkDir(folder):
+      # widen the string because Windows only reads wide strings
+      let widestr: LPCWSTR = newWideCString(path)
+  
+      if (kind == pcFile):
+        if (negativeCatchupTime * -1 > min_time_ms):
+          # skip frames if took too long to set
+          negativeCatchupTime += min_time_ms
+        else:
+          discard SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, widestr, SPIF_UPDATEINIFILE or SPIF_SENDCHANGE)
+          calculatedSleep(min_time_ms)
+      # break out if stopping
+      #if (not playing): break
 
 
 
 proc togglePlay() =
-  playing = not playing
-  if (playing):
-    slideshow()
+  slideshow()
+  #playing = not playing
+  #if (playing):
+    #slideshow()
     #createThread(thr[], slideshow)
-    button_play.setLabel("Stop Slideshow")
+    #button_play.setLabel("Stop Slideshow")
     # disable playing and loading
-    button_ldslides.disable()
-    combobox_dfslides.disable()
+    #button_ldslides.disable()
+    #combobox_dfslides.disable()
     # disable editing too
-    enableEditing(false)
-  else:
-    button_play.disable()
-    button_play.setLabel(". . . Stopping . . .")
+    #enableEditing(false)
+  #else:
+    #button_play.disable()
+    #button_play.setLabel(". . . Stopping . . .")
     #joinThreads(thr[])
-    button_play.setLabel("Play Slideshow")
-    sleep(1) # for some reason without this, it glitches
+    #button_play.setLabel("Play Slideshow")
+    #sleep(1) # for some reason without this, it glitches
     
     # enable playing and loading again
-    button_play.enable()
-    button_ldslides.enable()
-    combobox_dfslides.enable()
+    #button_play.enable()
+    #button_ldslides.enable()
+    #combobox_dfslides.enable()
     # enable editing too
-    enableEditing(slideshow_preset == enum_custom)
+    #enableEditing(slideshow_preset == enum_custom)
 
 
 
