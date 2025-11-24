@@ -9,7 +9,7 @@ Keep all the folders relative to one another
 
 Everything shown in the GUI should work beyond this point.
 
-![Screenshot of the Nimfinite Wallpapers program](https://github.com/JusPSLiu/NimfiniteWallpapers/src/example.png)
+![Screenshot of the Nimfinite Wallpapers program](https://github.com/JusPSLiu/NimfiniteWallpapers/blob/main/src/example.png)
 
 # Creating a Custom Slideshow
 The program supports the functionality of creating your own custom slideshow. Simply load your desired images, set each image length, and then play it back with the play button at the bottom of the program.
