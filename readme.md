@@ -1,9 +1,9 @@
 # Nimfinite Wallpapers
 by the Nimfinite Nimwits
 
-Using the Nim programming language, this program automates changing the Windows desktop background using the wNim and winim libraries.
+Using the Nim programming language, this program automates changing the Windows desktop background using the [wNim](https://github.com/khchen/wNim) and [winim](https://github.com/khchen/winim) libraries.
 
-To run, install Nim 1.4.8 and compile NimfiniteWallpapers.nim with the following command:
+To run, install [Nim 1.4.8](https://nim-lang.org/install.html#:~:text=Nim%201.4:) and compile NimfiniteWallpapers.nim with the following command:
 ```
 nim c NimfiniteWallpapers.nim
 ```
