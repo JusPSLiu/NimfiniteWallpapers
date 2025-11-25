@@ -1,13 +1,13 @@
 # Package
 
-version       = "0.1.0"
-author        = "JusPSLiu"
-description   = "A new awesome nimble package"
+version       = "1.0.0"
+author        = "Nimfinite Nimwits"
+description   = "Wallpaper slideshow software."
 license       = "MIT"
-srcDir        = "src"
+srcDir        = "."
 bin           = @["NimfiniteWallpapers"]
 
 
 # Dependencies
 
-requires "nim >= 2.2.4", "winim", "wnim"
+requires "nim >= 1.4.8", "winim", "wnim"
