@@ -7,7 +7,7 @@ Everything shown in the GUI should work beyond this point.
 
 ![Screenshot of the Nimfinite Wallpapers program](https://github.com/JusPSLiu/NimfiniteWallpapers/blob/main/src/example.png)
 
-# Creating a Custom Slideshow
+# 🔧 Creating a Custom Slideshow
 The program supports the functionality of creating your own custom slideshow. Simply load your desired images, set each image length, and then play it back with the play button at the bottom of the program.
 
 Slides can be reordered with the `Swap with Next` and `Swap with Previous` buttons, and an image can be replaced with the `Replace Image` button.
@@ -16,12 +16,13 @@ In order to set the length, type a number and then press `[enter]` in order to s
 
 If you would like to save this slideshow, simply click the save button on the top right, and save a file of the proprietary `.nimwal` format. The file can then be loaded with the load button which can be located at the top left of the program.
 
-# Wallpaper Presets
+# 🏞️ Wallpaper Presets
 This program comes with a couple of wallpaper presets; `Rickroll` and `Bad Apple`.
 
 To use these presets, simply use the dropdown and select one. Note, however, that these presets are predefined and cannot be modified.
 
-## Compiling NimfiniteWallpapers
+
+# ⚙️ Compiling NimfiniteWallpapers
 
 We provide a `win64 x86_64` build of the executable in releases, but other platforms may have to compile it themselves.
 
