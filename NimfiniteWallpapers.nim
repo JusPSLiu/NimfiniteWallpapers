@@ -95,13 +95,11 @@ proc enableEditing(enable : bool = true) =
     if (slideshow_index < slideshow_len): button_swn.enable()
     if (slideshow_index > 0): button_swp.enable()
   else:
-    button_svslides.disable()
-    textctrl_name.disable()
-    button_replace.disable()
-    button_insert.disable()
-    button_swn.disable()
-    button_swp.disable()
-    button_del.disable()
+    button_svslides.disable(); textctrl_name.disable(); button_replace.disable(); button_insert.disable(); button_swn.disable(); button_swp.disable(); button_del.disable()
+    # trigger refresh; the refresh() function doesn't work
+    button_svslides.setLabel("Save Custom Slideshow"); button_replace.setLabel("Replace Image")
+    button_insert.setLabel("Insert Image(s)"); button_swn.setLabel("Swap with Next")
+    button_swp.setLabel("Swap with Previous"); button_del.setLabel("Delete Image")
 
 proc changeName(newname : string) =
   slideshow_name = newname
@@ -470,7 +468,18 @@ proc slideshow() =
 
 
 proc togglePlay() =
+  # disable playing, loading and editing
+  button_ldslides.disable(); combobox_dfslides.disable(); enableEditing(false)
+  button_ldslides.setLabel("Load Custom Slideshow") # trigger a refresh; the refresh() function doesn't seem to work
+  button_play.disable(); button_play.setLabel("* Playing *")
+  
   slideshow()
+  sleep(1)
+  
+  button_play.enable(); button_play.setLabel("Play Slideshow")
+  # enable loading and editing again
+  button_ldslides.enable(); combobox_dfslides.enable(); enableEditing(slideshow_preset == enum_custom)
+
   #playing = not playing
   #if (playing):
     #slideshow()
